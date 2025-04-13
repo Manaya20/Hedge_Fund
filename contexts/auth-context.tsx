@@ -5,7 +5,7 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import type { Session, User } from "@supabase/supabase-js"
-import { supabase } from "@/lib/supabase"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
 type AuthContextType = {
   user: User | null
@@ -24,6 +24,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    // Skip Supabase operations if not properly configured
+    if (!isSupabaseConfigured()) {
+      console.warn("Supabase is not properly configured. Auth functionality will be limited.")
+      setIsLoading(false)
+      return
+    }
+
     const fetchSession = async () => {
       setIsLoading(true)
       try {
@@ -57,6 +64,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signOut = async () => {
+    if (!isSupabaseConfigured()) {
+      console.warn("Supabase is not properly configured. Cannot sign out.")
+      return
+    }
+
     try {
       await supabase.auth.signOut()
       router.push("/login")
@@ -66,6 +78,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const refreshSession = async () => {
+    if (!isSupabaseConfigured()) {
+      console.warn("Supabase is not properly configured. Cannot refresh session.")
+      return
+    }
+
     try {
       const {
         data: { session },

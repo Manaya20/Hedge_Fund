@@ -37,22 +37,31 @@ export default function Dashboard() {
       if (!user) return
 
       try {
-        const { data, error } = await supabase
+        // First, get the user subscription
+        const { data: subscriptionData, error: subscriptionError } = await supabase
           .from("user_subscriptions")
-          .select(`
-            id,
-            status,
-            trial_ends_at,
-            tier:tier_id(
-              name,
-              features
-            )
-          `)
+          .select("id, status, trial_ends_at, tier_id")
           .eq("user_id", user.id)
           .single()
 
-        if (error) throw error
-        setSubscription(data)
+        if (subscriptionError) throw subscriptionError
+
+        // Then, get the tier details
+        if (subscriptionData) {
+          const { data: tierData, error: tierError } = await supabase
+            .from("subscription_tiers")
+            .select("name, features")
+            .eq("id", subscriptionData.tier_id)
+            .single()
+
+          if (tierError) throw tierError
+
+          // Combine the data
+          setSubscription({
+            ...subscriptionData,
+            tier: tierData,
+          })
+        }
       } catch (error) {
         console.error("Error fetching subscription:", error)
       } finally {
